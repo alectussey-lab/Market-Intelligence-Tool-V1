@@ -64,7 +64,24 @@ export function ProductLookup() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [productTypeSearch, setProductTypeSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const itemsPerPage = 20;
+
+  const handleProductSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productTypeSearch) return;
+    
+    setIsSearching(true);
+    setShowResults(false);
+    
+    // Simulate AI deep search
+    setTimeout(() => {
+      setIsSearching(false);
+      setShowResults(true);
+    }, 2000);
+  };
 
   const handleSort = (key: keyof CompanyRecord) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -87,6 +104,14 @@ export function ProductLookup() {
       const lowerSearch = globalSearch.toLowerCase();
       result = result.filter(item => 
         Object.values(item).some(val => String(val).toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    // Product Type Search (Primary)
+    if (productTypeSearch && showResults) {
+      const lowerProduct = productTypeSearch.toLowerCase();
+      result = result.filter(item => 
+        item.productsMade.toLowerCase().includes(lowerProduct)
       );
     }
 
@@ -131,32 +156,64 @@ export function ProductLookup() {
 
   return (
     <div className="main-content">
-      <div className="table-card">
-        
-        {/* Table Header Area */}
-        <div className="table-header-area">
-          <div>
-            <h1 className="table-title">Product Lookup</h1>
-            <div className="search-input-wrapper">
-              <Search className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search everywhere..." 
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="action-buttons">
-            <button className="btn-filter">
-              <Filter size={16} /> Filters
-            </button>
-            <button className="btn-primary">
-              <Plus size={16} /> Add Manually
-            </button>
-          </div>
+      <div className="page-header" style={{ marginBottom: '2rem' }}>
+        <div>
+          <h1 className="page-title">Product Lookup</h1>
+          <p className="page-description">Identify manufacturers and specific facilities by product type.</p>
         </div>
+        
+        <form onSubmit={handleProductSearch} className="search-bar-container">
+          <Search className="search-icon" size={20} />
+          <input 
+            type="text" 
+            className="search-input" 
+            placeholder="What product are you looking for? (e.g. 'IQF Chicken', 'Frozen Pizza')"
+            value={productTypeSearch}
+            onChange={(e) => setProductTypeSearch(e.target.value)}
+          />
+          <button type="submit" className="btn-primary" style={{ padding: '0 1.5rem' }}>
+            Search
+          </button>
+        </form>
+
+        {isSearching && (
+          <div className="ai-status-banner">
+            <Sparkles className="ai-status-icon" size={18} />
+            <span className="ai-status-text">Scanning facility capabilities...</span>
+            <span className="ai-status-detail">Cross-referencing production lines and product registries</span>
+          </div>
+        )}
+      </div>
+
+      {showResults ? (
+        <>
+          <div className="table-card">
+            {/* Table Header Area */}
+            <div className="table-header-area">
+              <div>
+                <h2 className="table-title" style={{ fontSize: '1rem', color: '#64748b' }}>
+                  Search Results for "{productTypeSearch}"
+                </h2>
+                <div className="search-input-wrapper">
+                  <Search className="search-icon" />
+                  <input 
+                    type="text" 
+                    placeholder="Filter results..." 
+                    value={globalSearch}
+                    onChange={(e) => setGlobalSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="action-buttons">
+                <button className="btn-filter">
+                  <Filter size={16} /> Filters
+                </button>
+                <button className="btn-primary">
+                  <Plus size={16} /> Add Manually
+                </button>
+              </div>
+            </div>
 
         {/* Table Content */}
         <div style={{ overflowX: 'auto' }}>
@@ -305,7 +362,17 @@ export function ProductLookup() {
             ))}
           </MapContainer>
         </div>
-      </div>
+          </div>
+        </>
+      ) : !isSearching && (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', minHeight: '400px' }}>
+          <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+            <Search size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+            <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Start Your Search</h2>
+            <p>Enter a product category or specific SKU to identify manufacturers and their facility locations.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

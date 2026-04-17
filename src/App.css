@@ -367,7 +367,7 @@
 
 /* Map Module */
 .map-module-container {
-  height: 500px;
+  height: 1500px;
   width: 100%;
   margin-top: 2rem;
   background: #ffffff;
@@ -397,4 +397,105 @@
 
 .leaflet-container {
   border-radius: 0 0 12px 12px;
+}
+/* Page Headers */
+.page-header {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+}
+
+.page-description {
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* AI Search Bar */
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  max-width: 800px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.search-bar-container:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  color: #0f172a;
+  padding: 0.5rem 0;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* AI Status Banner */
+.ai-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.ai-status-icon {
+  color: #0284c7;
+  animation: pulse 2s infinite;
+}
+
+.ai-status-text {
+  font-weight: 600;
+  color: #0369a1;
+  font-size: 0.875rem;
+}
+
+.ai-status-detail {
+  color: #0ea5e9;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
