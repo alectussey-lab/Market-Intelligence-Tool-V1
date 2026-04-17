@@ -1,12 +1,12 @@
-import React from 'react';
+
 import { NavLink } from 'react-router-dom';
 import { 
-  Search, 
-  Building2, 
   Bookmark, 
   Download, 
   Settings,
-  Leaf
+  LayoutDashboard,
+  FolderOpen,
+  User
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -14,49 +14,52 @@ export function Sidebar() {
     <div className="sidebar">
       <div className="sidebar-header">
         <h1 className="sidebar-title">
-          <Leaf className="sidebar-title-icon" size={24} />
-          Plant Intel
+          <img src="/src/assets/forpak-logo.png" alt="Forpak Automation" className="forpak-logo-img" />
         </h1>
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink to="/product-lookup" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Search className="nav-icon" size={20} />
-          Product Lookup
+        <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <LayoutDashboard className="nav-icon" size={20} />
+          Dashboard
         </NavLink>
         
-        <NavLink to="/company-lookup" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Building2 className="nav-icon" size={20} />
-          Company Lookup
-        </NavLink>
+        <div className="sidebar-section">
+          <h3 className="sidebar-section-title">Lookups</h3>
+          <NavLink to="/product-lookup" className={({ isActive }) => `nav-item sub-item ${isActive ? 'active' : ''}`}>
+            <FolderOpen className="nav-icon" size={18} />
+            Product Lookup
+          </NavLink>
+          <NavLink to="/company-lookup" className={({ isActive }) => `nav-item sub-item ${isActive ? 'active' : ''}`}>
+            <FolderOpen className="nav-icon" size={18} />
+            Plant Lookup
+          </NavLink>
+        </div>
         
-        <div className="nav-divider"></div>
-        
-        <NavLink to="/saved-searches" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Bookmark className="nav-icon" size={20} />
-          Saved Searches
-        </NavLink>
-        
-        <NavLink to="/export-list" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Download className="nav-icon" size={20} />
-          Export List
-        </NavLink>
-        
-        <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Settings className="nav-icon" size={20} />
-          Settings
-        </NavLink>
-      </nav>
+        <div className="sidebar-section">
+          <h3 className="sidebar-section-title">Saved Data</h3>
+          <NavLink to="/saved-searches" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <Bookmark className="nav-icon" size={20} />
+            Saved Searches
+          </NavLink>
+          <NavLink to="/export-list" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <Download className="nav-icon" size={20} />
+            Export List
+          </NavLink>
+        </div>
 
-      <div className="cost-meter">
-        <div className="cost-meter-header">
-          <span className="cost-meter-title">API Budget</span>
-          <span className="cost-meter-value">$12.40 / $100</span>
+        <div className="sidebar-section">
+          <h3 className="sidebar-section-title">Settings</h3>
+          <NavLink to="/profile" className={({ isActive }) => `nav-item sub-item-chevron ${isActive ? 'active' : ''}`}>
+            <User className="nav-icon" size={18} />
+            User Profile
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => `nav-item sub-item-chevron ${isActive ? 'active' : ''}`}>
+            <Settings className="nav-icon" size={18} />
+            Account
+          </NavLink>
         </div>
-        <div className="cost-meter-bar-bg">
-          <div className="cost-meter-bar-fill" style={{ width: '12.4%' }}></div>
-        </div>
-      </div>
+      </nav>
     </div>
   );
 }
