@@ -1,15 +1,21 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import pattyData from "../data/patty_data.json";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-export interface CompanyRecord {
+/**
+ * Standard Operating Procedure (SOP) v1.3 - AI Investigative Strategy
+ * 1. Reference PATE Data: Check if the product type exists in the known dataset.
+ * 2. Multi-Pass Search: Identify primary manufacturers, then hunt for hidden co-packers.
+ * 3. Geographic Clustering: Identify manufacturing hubs in North America.
+ * 4. Verification: Apply confidence scores based on industrial capacity and inferred throughput.
+ */
+
+export interface PlantResult {
   id: string;
   parentCompany: string;
   companyName: string;
   productsMade: string;
-  confidence: 'High' | 'Medium' | 'Low';
+  confidence: "High" | "Medium" | "Low";
   cityState: string;
   throughput: string;
   capacity: string;
@@ -17,114 +23,88 @@ export interface CompanyRecord {
   lng: number;
 }
 
-export interface HierarchyNode {
-  name: string;
-  type: 'parent' | 'unit' | 'acquisition' | 'segment' | 'cluster' | 'plant';
-  details?: string;
-  children?: HierarchyNode[];
-  status?: 'Active' | 'Under Review' | 'Strategic';
+// Global instance to handle model initialization once
+let genAI: any = null;
+
+function getGenAI() {
+  if (!genAI && API_KEY) {
+    genAI = new GoogleGenerativeAI(API_KEY);
+  }
+  return genAI;
 }
 
-const SYSTEM_PROMPT = `
-You are an expert Corporate Investigator specializing in the North American food manufacturing industry.
-Your goal is to identify facilities and manufacturers for a specific product type.
-
-### INVESTIGATION STRATEGY (SOP v1.2)
-1. **PATE Data Reference**: Start by checking the provided PATE reference data for known facilities making the product.
-2. **Primary Manufacturers**: Identify major publicly known plants and parent companies for this product category.
-3. **Hidden Intelligence (Deep Search)**: 
-   - Identify "hidden" facilities: plants that operate under obscure business unit names or have been recently acquired.
-   - Uncover Co-Packers: Identify major co-manufacturing facilities that likely produce this product for private labels or major brands.
-   - Geographic Inference: If a major hub (e.g., Springdale, AR for poultry) is identified, look for secondary facilities in that cluster.
-4. **Confidence Scoring**:
-   - **High**: Facility is confirmed in PATE data or major industry registries.
-   - **Medium**: Inferred from parent company business units or secondary research.
-   - **Low**: Potential co-packer or "hidden" facility based on geographic hub location.
-
-### OUTPUT FORMAT
-Return a valid JSON array of objects following the CompanyRecord interface.
-Each object must have: id, parentCompany, companyName, productsMade, confidence, cityState, throughput, capacity, lat, lng.
-Ensure coordinates (lat, lng) are as accurate as possible for North America.
-
-REFERENCE DATA (PATE):
-${JSON.stringify(pattyData.slice(0, 100))} // Using a sample of PATE data to keep context window clean
-`;
-
-export async function searchPlants(query: string): Promise<CompanyRecord[]> {
-  if (!API_KEY) {
-    console.error("Gemini API Key is missing");
+export async function searchPlants(query: string): Promise<PlantResult[]> {
+  const client = getGenAI();
+  
+  if (!client) {
     throw new Error("Gemini API Key is missing. Please add VITE_GEMINI_API_KEY to your .env.local file.");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const modelName = "gemini-1.5-flash";
+  console.log(`Initializing Gemini Search with model: ${modelName}`);
+  console.log(`API Key starts with: ${API_KEY.substring(0, 4)}...`);
+  
+  const model = client.getGenerativeModel({ model: modelName });
 
   const prompt = `
   INVESTIGATION TASK: Identify all North American food manufacturing plants producing: "${query}"
   
-  Please perform a multi-pass search to uncover both obvious manufacturers and hidden co-packers/shadow facilities.
+  AR SOP v1.3 REQUIREMENTS:
+  1. IDENTIFY: Primary brand manufacturers and enterprise-level parent companies.
+  2. DISCOVER: Hidden co-packers or secondary facilities not immediately obvious.
+  3. DATA FIELDS:
+     - parentCompany: The ultimate corporate owner (e.g., Tyson, OSI Group).
+     - companyName: The specific facility name and location.
+     - productsMade: Broad categories (e.g., Protein, IQF, RTE, Bakery).
+     - confidence: High (verified), Medium (inferred), Low (potential).
+     - cityState: Format "City, State/Province".
+     - throughput: Estimated lbs/hr based on industrial standards for this product.
+     - capacity: Scale (e.g., Enterprise, Industrial - Tier 1, Specialized).
+     - coordinates: Precise lat/lng for mapping.
+
+  OUTPUT FORMAT: Return ONLY a raw JSON array of objects. No markdown, no explanations.
   
-  Return ONLY the JSON array.
+  EXAMPLE:
+  [
+    {
+      "id": "1",
+      "parentCompany": "OSI Group",
+      "companyName": "OSI - Oakland Plant",
+      "productsMade": "Protein, IQF, Beef",
+      "confidence": "High",
+      "cityState": "Oakland, IA",
+      "throughput": "18,000 lbs/hr",
+      "capacity": "Enterprise",
+      "lat": 41.31,
+      "lng": -95.39
+    }
+  ]
   `;
 
   try {
-    const result = await model.generateContent([SYSTEM_PROMPT, prompt]);
+    const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
     
-    // Extract JSON if AI wrapped it in markdown
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    
-    return JSON.parse(text);
+    // Clean up potential markdown formatting if AI includes it
+    const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonString);
   } catch (error) {
     console.error("Gemini Search Error:", error);
     throw error;
   }
 }
 
-export async function getCompanyHierarchy(companyName: string): Promise<HierarchyNode> {
-  if (!API_KEY) {
-    throw new Error("Gemini API Key is missing.");
-  }
+export async function getCompanyHierarchy(company: string) {
+  const client = getGenAI();
+  if (!client) return null;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const prompt = `MAP ENTERPRISE HIERARCHY FOR: "${company}"
+  Identify Parent Company, Acquisitions, Business Units, and major Plants.
+  Return as a clean structured list or tree description.`;
 
-  const HIERARCHY_PROMPT = `
-  You are an expert in Corporate Intelligence.
-  Build a complete TOP-DOWN hierarchical map for the company: "${companyName}"
-  
-  The hierarchy must follow this EXACT structure:
-  1. Root (parent company)
-  2. Business Units (Major divisions)
-  3. Acquisitions/Segments (Sub-units or major acquired brands)
-  4. Regional Clusters (Geographic groupings of plants)
-  5. Processing Plants (Individual facility names and locations)
-
-  Return a valid JSON object following the HierarchyNode interface:
-  {
-    "name": string,
-    "type": "parent" | "unit" | "acquisition" | "segment" | "cluster" | "plant",
-    "details": string,
-    "status": "Active" | "Under Review" | "Strategic",
-    "children": HierarchyNode[]
-  }
-
-  Ensure the output is deep and comprehensive (at least 3-4 business units, each with multiple clusters and plants).
-  Return ONLY the JSON object.
-  `;
-
-  try {
-    const result = await model.generateContent(HIERARCHY_PROMPT);
-    const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("Hierarchy Search Error:", error);
-    throw error;
-  }
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
 }

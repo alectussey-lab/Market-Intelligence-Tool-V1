@@ -1,4 +1,3 @@
-
 import { Save, Database, Key, HardDrive } from 'lucide-react';
 
 export function Settings() {
