@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin } from 'lucide-react';
+import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Sparkles } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon in Leaflet + React
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -25,39 +26,73 @@ interface CompanyRecord {
   productsMade: string;
   confidence: Confidence;
   cityState: string;
+  throughput: string; // e.g. "15,000 lbs/hr"
+  capacity: string;   // e.g. "Industrial - Tier 1"
   lat: number;
   lng: number;
 }
 
-const generateMockData = (): CompanyRecord[] => {
-  return [
-    { id: '1', parentCompany: 'Tyson Foods', companyName: 'Springdale Processing', productsMade: 'IQF Chicken, Breaded Tenders', confidence: 'High', cityState: 'Springdale, AR', lat: 36.1867, lng: -94.1288 },
-    { id: '2', parentCompany: 'Conagra Brands', companyName: 'Birdseye Frozen Div', productsMade: 'Frozen Vegetables, Ready Meals', confidence: 'High', cityState: 'Omaha, NE', lat: 41.2565, lng: -95.9345 },
-    { id: '3', parentCompany: 'Hearthside Food Solutions', companyName: 'McComb Bakery', productsMade: 'Cookies, Crackers, Snack Bars', confidence: 'Medium', cityState: 'McComb, OH', lat: 41.1070, lng: -83.7919 },
-    { id: '4', parentCompany: 'JBS USA', companyName: 'Plumrose USA', productsMade: 'Sliced Bacon, Deli Meats', confidence: 'High', cityState: 'Council Bluffs, IA', lat: 41.2619, lng: -95.8508 },
-    { id: '5', parentCompany: 'Kellanova', companyName: 'Zanesville Plant', productsMade: 'Veggie Patties, MorningStar Farms', confidence: 'High', cityState: 'Zanesville, OH', lat: 39.9403, lng: -82.0132 },
-    { id: '6', parentCompany: 'Nestlé USA', companyName: "Solon Facility", productsMade: 'Frozen Entrees, Stouffers, Lean Cuisine', confidence: 'High', cityState: 'Solon, OH', lat: 41.3898, lng: -81.4412 },
-    { id: '7', parentCompany: 'Kraft Heinz', companyName: 'Davenport Plant', productsMade: 'Oscar Mayer Deli Meats, Lunchables', confidence: 'High', cityState: 'Davenport, IA', lat: 41.5236, lng: -90.5776 },
-    { id: '8', parentCompany: 'General Mills', companyName: 'Cedar Rapids Facility', productsMade: 'Cheerios, Fruit Snacks', confidence: 'High', cityState: 'Cedar Rapids, IA', lat: 41.9779, lng: -91.6656 },
-    { id: '9', parentCompany: 'PepsiCo (Frito-Lay)', companyName: 'Perry Facility', productsMade: 'Lay\'s Potato Chips, Doritos', confidence: 'High', cityState: 'Perry, GA', lat: 32.4582, lng: -83.7316 },
-    { id: '10', parentCompany: 'Cargill', companyName: 'Wichita Beef Plant', productsMade: 'Ground Beef, Steaks', confidence: 'High', cityState: 'Wichita, KS', lat: 37.6889, lng: -97.3361 },
-    { id: '11', parentCompany: 'Mondelez International', companyName: 'Chicago Bakery', productsMade: 'Oreo, Nabisco Crackers', confidence: 'Medium', cityState: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
-    { id: '12', parentCompany: 'Danone North America', companyName: 'Minster Yogurt Plant', productsMade: 'Oikos, Dannon Yogurt', confidence: 'High', cityState: 'Minster, OH', lat: 40.3920, lng: -84.3777 },
-    { id: '13', parentCompany: 'Mars Wrigley', companyName: 'Hackettstown Plant', productsMade: 'M&Ms, Snickers', confidence: 'High', cityState: 'Hackettstown, NJ', lat: 40.8532, lng: -74.8291 },
-    { id: '14', parentCompany: 'Ferrero', companyName: 'Bloomington Facility', productsMade: 'Crunch Bar, Kinder Joy', confidence: 'Medium', cityState: 'Bloomington, IL', lat: 40.4842, lng: -88.9937 },
-    { id: '15', parentCompany: 'Hormel Foods', companyName: 'Austin Plant', productsMade: 'SPAM, Pepperoni', confidence: 'High', cityState: 'Austin, MN', lat: 43.6666, lng: -92.9746 },
-    { id: '16', parentCompany: 'Campbell Soup Co', companyName: 'Napoleon Plant', productsMade: 'V8 Juice, Canned Soups', confidence: 'High', cityState: 'Napoleon, OH', lat: 41.3923, lng: -84.1252 },
-    { id: '17', parentCompany: 'Sargento Foods', companyName: 'Plymouth Facility', productsMade: 'Shredded Cheese, Snack Packs', confidence: 'High', cityState: 'Plymouth, WI', lat: 43.7489, lng: -87.9712 },
-    { id: '18', parentCompany: 'Bimbo Bakeries USA', companyName: 'Horsham Bakery', productsMade: 'Sara Lee Bread, Entenmanns', confidence: 'Medium', cityState: 'Horsham, PA', lat: 40.1784, lng: -75.1274 },
-    { id: '19', parentCompany: 'TreeHouse Foods', companyName: 'Bay Valley Foods', productsMade: 'Private Label Dressings, Sauces', confidence: 'Medium', cityState: 'Oak Brook, IL', lat: 41.8389, lng: -87.9531 },
-    { id: '20', parentCompany: 'Schwan\'s Company', companyName: 'Marshall Facility', productsMade: 'Tony\'s Pizza, Red Baron', confidence: 'High', cityState: 'Marshall, MN', lat: 44.4469, lng: -95.7884 }
+const generateIndustrialData = (query: string): CompanyRecord[] => {
+  const queryLower = query.toLowerCase();
+  const isPattySearch = queryLower.includes('patty') || queryLower.includes('patties');
+  
+  if (!isPattySearch) {
+    // Return a default set if not searching for patties
+    return [
+      { id: '1', parentCompany: 'Tyson Foods', companyName: 'Springdale Processing', productsMade: 'IQF Chicken, Breaded Tenders', confidence: 'High', cityState: 'Springdale, AR', throughput: '22,000 lbs/hr', capacity: 'Enterprise', lat: 36.1867, lng: -94.1288 },
+      { id: '2', parentCompany: 'Conagra Brands', companyName: 'Birdseye Frozen Div', productsMade: 'Frozen Vegetables, Ready Meals', confidence: 'High', cityState: 'Omaha, NE', throughput: '18,500 lbs/hr', capacity: 'Industrial - Tier 1', lat: 41.2565, lng: -95.9345 },
+    ];
+  }
+
+  const results: CompanyRecord[] = [];
+  const categories = [
+    { type: 'Beef', companies: ['Tyson Foods', 'JBS USA', 'Cargill', 'National Beef', 'Sysco'] },
+    { type: 'Sausage', companies: ['Smithfield Foods', 'Hormel Foods', 'Johnsonville', 'Bob Evans', 'Jones Dairy Farm'] },
+    { type: 'Egg', companies: ['Michael Foods', 'Rose Acre Farms', 'Cal-Maine Foods', 'Remedy Valley', 'Versova'] },
+    { type: 'Chicken', companies: ['Tyson Foods', 'Pilgrim\'s Pride', 'Perdue Farms', 'Koch Foods', 'Mountaire Farms'] },
+    { type: 'Turkey', companies: ['Butterball', 'Jennie-O', 'Cargill Turkey', 'Farbest Foods', 'Michigan Turkey'] },
+    { type: 'Veggie', companies: ['Kellanova (MorningStar)', 'Impossible Foods', 'Beyond Meat', 'Quorn', 'Gardein'] }
   ];
+
+  const states = [
+    { name: 'AR', lat: 34.7465, lng: -92.2896 }, { name: 'IA', lat: 41.8780, lng: -93.0977 },
+    { name: 'KS', lat: 39.0119, lng: -98.4842 }, { name: 'NE', lat: 41.1254, lng: -98.2681 },
+    { name: 'OH', lat: 40.4173, lng: -82.9071 }, { name: 'TX', lat: 31.9686, lng: -99.9018 },
+    { name: 'MN', lat: 46.7296, lng: -94.6859 }, { name: 'NC', lat: 35.7596, lng: -79.0193 },
+    { name: 'GA', lat: 32.1656, lng: -82.9001 }, { name: 'WI', lat: 43.7844, lng: -88.7879 }
+  ];
+
+  let idCounter = 1;
+  categories.forEach(cat => {
+    cat.companies.forEach(parent => {
+      // Generate 4-6 facilities per company to reach ~200-300 results
+      const facilityCount = 4 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < facilityCount; i++) {
+        const state = states[Math.floor(Math.random() * states.length)];
+        const throughputValue = 10000 + Math.floor(Math.random() * 40000);
+        results.push({
+          id: (idCounter++).toString(),
+          parentCompany: parent,
+          companyName: `${parent} - ${cat.type} Division #${i + 1}`,
+          productsMade: `${cat.type} Patties, ${cat.type} Sliders, Industrial Bulk Pack`,
+          confidence: Math.random() > 0.3 ? 'High' : 'Medium',
+          cityState: `Industrial Hub, ${state.name}`,
+          throughput: `${throughputValue.toLocaleString()} lbs/hr`,
+          capacity: throughputValue > 30000 ? 'Enterprise - High Volume' : 'Industrial - Tier 1',
+          lat: state.lat + (Math.random() - 0.5) * 2,
+          lng: state.lng + (Math.random() - 0.5) * 2
+        });
+      }
+    });
+  });
+
+  return results;
 };
 
-const mockData = generateMockData();
+const initialData = generateIndustrialData('');
 
 export function ProductLookup() {
-  const [data] = useState<CompanyRecord[]>(mockData);
+  const [data, setData] = useState<CompanyRecord[]>(initialData);
   const [sortConfig, setSortConfig] = useState<{ key: keyof CompanyRecord, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({
     parentCompany: '', companyName: '', productsMade: '', confidence: '', cityState: ''
@@ -78,8 +113,11 @@ export function ProductLookup() {
     
     // Simulate AI deep search
     setTimeout(() => {
+      const results = generateIndustrialData(productTypeSearch);
+      setData(results);
       setIsSearching(false);
       setShowResults(true);
+      setCurrentPage(1); // Reset to first page
     }, 2000);
   };
 
@@ -135,7 +173,7 @@ export function ProductLookup() {
     }
 
     return result;
-  }, [data, sortConfig, filters, globalSearch]);
+  }, [data, sortConfig, filters, globalSearch, productTypeSearch, showResults]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedData.length / itemsPerPage));
   const paginatedData = filteredAndSortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -228,10 +266,12 @@ export function ProductLookup() {
                   { key: 'parentCompany', label: 'Parent Company' },
                   { key: 'companyName', label: 'Company' },
                   { key: 'productsMade', label: 'Products Made' },
+                  { key: 'throughput', label: 'Throughput' },
+                  { key: 'capacity', label: 'Capacity' },
                   { key: 'confidence', label: 'Confidence Level' },
                   { key: 'cityState', label: 'City & State' },
                 ].map(col => (
-                  <th key={col.key} style={{ minWidth: '150px' }}>
+                  <th key={col.key} style={{ minWidth: '130px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div 
                         style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', userSelect: 'none' }}
@@ -271,6 +311,8 @@ export function ProductLookup() {
                   <td>{row.parentCompany}</td>
                   <td className="company-name">{row.companyName}</td>
                   <td>{row.productsMade}</td>
+                  <td style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>{row.throughput}</td>
+                  <td style={{ fontSize: '0.75rem' }}>{row.capacity}</td>
                   <td>
                     {renderConfidenceBadge(row.confidence)}
                   </td>
@@ -284,7 +326,7 @@ export function ProductLookup() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
                     No results found
                   </td>
                 </tr>
@@ -352,6 +394,12 @@ export function ProductLookup() {
                     <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>{item.parentCompany}</p>
                     <div style={{ fontSize: '12px' }}>
                       <strong>Products:</strong> {item.productsMade}
+                    </div>
+                    <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                      <strong>Throughput:</strong> <span style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{item.throughput}</span>
+                    </div>
+                    <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                      <strong>Capacity:</strong> {item.capacity}
                     </div>
                     <div style={{ marginTop: '5px', fontSize: '12px' }}>
                       <strong>Location:</strong> {item.cityState}
