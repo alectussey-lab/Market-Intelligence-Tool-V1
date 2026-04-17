@@ -1,121 +1,115 @@
 import React, { useState } from 'react';
-import { Search, Sparkles, Building2, MapPin, Network } from 'lucide-react';
+import { Search, Sparkles, Network, Loader2 } from 'lucide-react';
+import { getCompanyHierarchy, type HierarchyNode } from '../lib/gemini';
 
-export function CompanyLookup() {
-  const [query, setQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query) return;
-    setIsSearching(true);
-    
-    // Simulate AI search delay
-    setTimeout(() => {
-      setIsSearching(false);
-      setShowResults(true);
-    }, 2000);
-  };
-
+function HierarchyItem({ node }: { node: HierarchyNode }) {
   return (
-    <div className="page-container">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Company Lookup</h1>
-          <p className="page-description">Map full enterprise hierarchies and manufacturing networks.</p>
-        </div>
-        
-        <form onSubmit={handleSearch} className="search-bar-container">
-          <Search className="search-icon" size={20} />
-          <input 
-            type="text" 
-            className="search-input" 
-            placeholder="e.g. 'Tyson Foods', 'Conagra', 'Hearthside'"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button type="submit" style={{display: 'none'}}>Search</button>
-        </form>
-
-        {isSearching && (
-          <div className="ai-status-banner">
-            <Sparkles className="ai-status-icon" size={18} />
-            <span className="ai-status-text">Mapping corporate hierarchy...</span>
-            <span className="ai-status-detail">Checking M&A records and facility locators</span>
+    <div className="hierarchy-item">
+      {node.type !== 'parent' && <div className="node-connector"></div>}
+      <div className={`hierarchy-node node-${node.type}`}>
+        <span className="node-type">{node.type}</span>
+        <span className="node-title">{node.name}</span>
+        {node.details && <span className="node-details">{node.details}</span>}
+        {node.status && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+            {node.status}
           </div>
         )}
-      </header>
-
-      {showResults ? (
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          {/* Mock Hierarchy View */}
-          <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-              <Building2 size={32} color="var(--accent-primary)" />
-              <div>
-                <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Tyson Foods</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Parent Enterprise • HQ: Springdale, AR</p>
-              </div>
-            </div>
-            
-            <div style={{ padding: '1rem', borderLeft: '2px solid var(--border-strong)', marginLeft: '1rem' }}>
-              <div style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                <div style={{ position: 'absolute', left: '-1rem', top: '0.5rem', width: '1rem', height: '2px', backgroundColor: 'var(--border-strong)' }}></div>
-                <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Prepared Foods Division</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Business Unit</p>
-                
-                <div style={{ padding: '1rem 0 0 1rem', borderLeft: '1px solid var(--border-subtle)', marginLeft: '0.5rem', marginTop: '0.5rem' }}>
-                  <div className="plant-card" style={{ border: '1px solid var(--border-subtle)', borderRadius: '8px', marginBottom: '1rem' }}>
-                    <div className="plant-card-header">
-                      <h4 className="plant-name">Springdale Processing</h4>
-                      <span className="badge badge-high">Active</span>
-                    </div>
-                    <div className="plant-address">
-                      <MapPin size={14} /> Springdale, AR
-                    </div>
-                  </div>
-                  <div className="plant-card" style={{ border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                    <div className="plant-card-header">
-                      <h4 className="plant-name">Fayetteville Plant 2</h4>
-                      <span className="badge badge-high">Active</span>
-                    </div>
-                    <div className="plant-address">
-                      <MapPin size={14} /> Fayetteville, AR
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', left: '-1rem', top: '0.5rem', width: '1rem', height: '2px', backgroundColor: 'var(--border-strong)' }}></div>
-                <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>AdvancePierre Foods</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Acquisition (2017)</p>
-                
-                <div style={{ padding: '1rem 0 0 1rem', borderLeft: '1px solid var(--border-subtle)', marginLeft: '0.5rem', marginTop: '0.5rem' }}>
-                  <div className="plant-card" style={{ border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                    <div className="plant-card-header">
-                      <h4 className="plant-name">Enid Facility</h4>
-                      <span className="badge badge-medium">Active</span>
-                    </div>
-                    <div className="plant-address">
-                      <MapPin size={14} /> Enid, OK
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-          <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-            <Network size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-            <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Map the Enterprise</h2>
-            <p>Enter a company name to discover its full organizational structure and plant network.</p>
-          </div>
+      </div>
+      
+      {node.children && node.children.length > 0 && (
+        <div className="hierarchy-children">
+          {node.children.map((child, idx) => (
+            <HierarchyItem key={idx} node={child} />
+          ))}
         </div>
       )}
     </div>
   );
 }
+
+export function CompanyLookup() {
+  const [query, setQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [hierarchy, setHierarchy] = useState<HierarchyNode | null>(null);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query) return;
+    
+    setIsSearching(true);
+    setHierarchy(null);
+    
+    try {
+      const result = await getCompanyHierarchy(query);
+      setHierarchy(result);
+    } catch (error) {
+      console.error("Hierarchy search failed:", error);
+      alert("Failed to map enterprise. Please check your connection.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  return (
+    <div className="main-content" style={{ padding: 0, backgroundColor: '#0b1120', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <header className="page-header" style={{ padding: '2rem', marginBottom: 0, zIndex: 10, background: 'linear-gradient(to bottom, #0b1120, transparent)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 className="page-title" style={{ color: '#fff' }}>Company Intelligence</h1>
+            <p className="page-description" style={{ color: '#94a3b8' }}>Enterprise hierarchy and facility network mapper.</p>
+          </div>
+          
+          <form onSubmit={handleSearch} className="search-bar-container search-dark">
+            <Search className="search-icon" size={20} />
+            <input 
+              type="text" 
+              className="search-input" 
+              placeholder="Enter company name (e.g. Tyson Foods)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              disabled={isSearching}
+            />
+            <button type="submit" className="btn-primary" style={{ padding: '0 1.5rem' }} disabled={isSearching}>
+              {isSearching ? <Loader2 className="animate-spin" size={20} /> : 'Map Network'}
+            </button>
+          </form>
+        </div>
+
+        {isSearching && (
+          <div className="ai-status-banner" style={{ background: 'rgba(2, 132, 199, 0.1)', borderColor: 'rgba(2, 132, 199, 0.3)', marginTop: '1.5rem' }}>
+            <Sparkles className="ai-status-icon" size={18} color="#38bdf8" />
+            <span className="ai-status-text" style={{ color: '#38bdf8' }}>Tracing corporate lineages and M&A history...</span>
+            <span className="ai-status-detail" style={{ color: '#7dd3fc' }}>Building high-fidelity relationship map</span>
+          </div>
+        )}
+      </header>
+
+      <div className="hierarchy-container">
+        {hierarchy ? (
+          <div className="hierarchy-root">
+            <HierarchyItem node={hierarchy} />
+          </div>
+        ) : !isSearching && (
+          <div style={{ textAlign: 'center', opacity: 0.5, marginTop: '10vh' }}>
+            <Network size={64} style={{ marginBottom: '1rem' }} />
+            <h2>Enterprise Mapper</h2>
+            <p>Enter a parent company to visualize its full industrial structure</p>
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="hierarchy-legend">
+          <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.5 }}>Network Legend</h4>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#3b82f6' }}></div> Parent Company</div>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#10b981' }}></div> Business Unit</div>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#f59e0b' }}></div> Acquisition</div>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#8b5cf6' }}></div> Business Segment</div>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#ec4899' }}></div> Regional Cluster</div>
+          <div className="legend-item"><div className="legend-dot" style={{ backgroundColor: '#e31837' }}></div> Processing Plant</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

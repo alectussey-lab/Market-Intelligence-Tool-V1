@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Sparkles } from 'lucide-react';
+import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Sparkles, Loader2 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import pattyData from '../data/patty_data.json';
+import { searchPlants, type CompanyRecord } from '../lib/gemini';
 
 // Fix for default marker icon in Leaflet + React
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -19,79 +19,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-type Confidence = 'High' | 'Medium' | 'Low';
-
-interface CompanyRecord {
-  id: string;
-  parentCompany: string;
-  companyName: string;
-  productsMade: string;
-  confidence: Confidence;
-  cityState: string;
-  throughput: string; // e.g. "15,000 lbs/hr"
-  capacity: string;   // e.g. "Industrial - Tier 1"
-  lat: number;
-  lng: number;
-}
-
-const generateIndustrialData = (query: string): CompanyRecord[] => {
-  const queryLower = query.toLowerCase();
-  
-  // If the user searches for "patty" or "paddy", use the real dataset
-  if (queryLower.includes('patty') || queryLower.includes('paddy')) {
-    return pattyData as CompanyRecord[];
-  }
-
-  // Otherwise return a filtered subset or default mock data
-  const results: CompanyRecord[] = [];
-  const categories = [
-    { type: 'Beef', companies: ['Tyson Foods', 'JBS USA', 'Cargill', 'National Beef', 'Sysco'] },
-    { type: 'Sausage', companies: ['Smithfield Foods', 'Hormel Foods', 'Johnsonville', 'Bob Evans', 'Jones Dairy Farm'] },
-    { type: 'Egg', companies: ['Michael Foods', 'Rose Acre Farms', 'Cal-Maine Foods', 'Remedy Valley', 'Versova'] },
-    { type: 'Chicken', companies: ['Tyson Foods', 'Pilgrim\'s Pride', 'Perdue Farms', 'Koch Foods', 'Mountaire Farms'] },
-    { type: 'Turkey', companies: ['Butterball', 'Jennie-O', 'Cargill Turkey', 'Farbest Foods', 'Michigan Turkey'] },
-    { type: 'Veggie', companies: ['Kellanova (MorningStar)', 'Impossible Foods', 'Beyond Meat', 'Quorn', 'Gardein'] }
-  ];
-
-  const states = [
-    { name: 'AR', lat: 34.7465, lng: -92.2896 }, { name: 'IA', lat: 41.8780, lng: -93.0977 },
-    { name: 'KS', lat: 39.0119, lng: -98.4842 }, { name: 'NE', lat: 41.1254, lng: -98.2681 },
-    { name: 'OH', lat: 40.4173, lng: -82.9071 }, { name: 'TX', lat: 31.9686, lng: -99.9018 },
-    { name: 'MN', lat: 46.7296, lng: -94.6859 }, { name: 'NC', lat: 35.7596, lng: -79.0193 },
-    { name: 'GA', lat: 32.1656, lng: -82.9001 }, { name: 'WI', lat: 43.7844, lng: -88.7879 }
-  ];
-
-  let idCounter = 1;
-  categories.forEach(cat => {
-    cat.companies.forEach(parent => {
-      // Generate 4-6 facilities per company to reach ~200-300 results
-      const facilityCount = 4 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < facilityCount; i++) {
-        const state = states[Math.floor(Math.random() * states.length)];
-        const throughputValue = 10000 + Math.floor(Math.random() * 40000);
-        results.push({
-          id: (idCounter++).toString(),
-          parentCompany: parent,
-          companyName: `${parent} - ${cat.type} Division #${i + 1}`,
-          productsMade: `${cat.type} Patties, ${cat.type} Sliders, Industrial Bulk Pack`,
-          confidence: Math.random() > 0.3 ? 'High' : 'Medium',
-          cityState: `Industrial Hub, ${state.name}`,
-          throughput: `${throughputValue.toLocaleString()} lbs/hr`,
-          capacity: throughputValue > 30000 ? 'Enterprise - High Volume' : 'Industrial - Tier 1',
-          lat: state.lat + (Math.random() - 0.5) * 2,
-          lng: state.lng + (Math.random() - 0.5) * 2
-        });
-      }
-    });
-  });
-
-  return results;
-};
-
-const initialData = generateIndustrialData('');
-
 export function ProductLookup() {
-  const [data, setData] = useState<CompanyRecord[]>(initialData);
+  const [data, setData] = useState<CompanyRecord[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: keyof CompanyRecord, direction: 'asc' | 'desc' } | null>(null);
   const [filters, setFilters] = useState<Record<string, string>>({
     parentCompany: '', companyName: '', productsMade: '', confidence: '', cityState: ''
@@ -101,23 +30,40 @@ export function ProductLookup() {
   const [productTypeSearch, setProductTypeSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [searchStatus, setSearchStatus] = useState('');
   const itemsPerPage = 20;
 
-  const handleProductSearch = (e: React.FormEvent) => {
+  const handleProductSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productTypeSearch) return;
     
     setIsSearching(true);
     setShowResults(false);
+    setSearchStatus('Consulting PATE database...');
     
-    // Simulate AI deep search
-    setTimeout(() => {
-      const results = generateIndustrialData(productTypeSearch);
+    try {
+      // Simulate multi-pass status updates
+      const statusInterval = setInterval(() => {
+        setSearchStatus(prev => {
+          if (prev === 'Consulting PATE database...') return 'Identifying primary manufacturers...';
+          if (prev === 'Identifying primary manufacturers...') return 'Uncovering hidden co-packers & business units...';
+          if (prev === 'Uncovering hidden co-packers & business units...') return 'Finalizing geographic clusters...';
+          return prev;
+        });
+      }, 2000);
+
+      const results = await searchPlants(productTypeSearch);
+      clearInterval(statusInterval);
+      
       setData(results);
       setIsSearching(false);
       setShowResults(true);
-      setCurrentPage(1); // Reset to first page
-    }, 2000);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Search failed:", error);
+      setIsSearching(false);
+      alert("Search failed. Please check your API key and connection.");
+    }
   };
 
   const handleSort = (key: keyof CompanyRecord) => {
@@ -130,7 +76,7 @@ export function ProductLookup() {
 
   const handleFilterChange = (key: keyof CompanyRecord, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page on filter
+    setCurrentPage(1); 
   };
 
   const filteredAndSortedData = useMemo(() => {
@@ -144,18 +90,11 @@ export function ProductLookup() {
       );
     }
 
-    // Product Type Search (Primary)
-    if (productTypeSearch && showResults) {
-      const lowerProduct = productTypeSearch.toLowerCase();
-      result = result.filter(item => 
-        item.productsMade.toLowerCase().includes(lowerProduct)
-      );
-    }
-
     // Column Filters
     (Object.keys(filters) as Array<keyof CompanyRecord>).forEach(key => {
       if (filters[key]) {
         const lowerFilter = filters[key].toLowerCase();
+        // @ts-ignore
         result = result.filter(item => String(item[key]).toLowerCase().includes(lowerFilter));
       }
     });
@@ -172,7 +111,7 @@ export function ProductLookup() {
     }
 
     return result;
-  }, [data, sortConfig, filters, globalSearch, productTypeSearch, showResults]);
+  }, [data, sortConfig, filters, globalSearch]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedData.length / itemsPerPage));
   const paginatedData = filteredAndSortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -182,7 +121,7 @@ export function ProductLookup() {
     return sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
   };
 
-  const renderConfidenceBadge = (confidence: Confidence) => {
+  const renderConfidenceBadge = (confidence: string) => {
     const lower = confidence.toLowerCase();
     return (
       <span className={`badge-confidence badge-${lower}`}>
@@ -196,7 +135,7 @@ export function ProductLookup() {
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title">Product Lookup</h1>
-          <p className="page-description">Identify manufacturers and specific facilities by product type.</p>
+          <p className="page-description">Identify manufacturers and specific facilities powered by Gemini AI.</p>
         </div>
         
         <form onSubmit={handleProductSearch} className="search-bar-container">
@@ -208,67 +147,23 @@ export function ProductLookup() {
             value={productTypeSearch}
             onChange={(e) => setProductTypeSearch(e.target.value)}
           />
-          <button type="submit" className="btn-primary" style={{ padding: '0 1.5rem' }}>
-            Search
+          <button type="submit" className="btn-primary" style={{ padding: '0 1.5rem' }} disabled={isSearching}>
+            {isSearching ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
           </button>
         </form>
 
         {isSearching && (
           <div className="ai-status-banner">
             <Sparkles className="ai-status-icon" size={18} />
-            <span className="ai-status-text">Scanning facility capabilities...</span>
+            <span className="ai-status-text">{searchStatus}</span>
             <span className="ai-status-detail">Cross-referencing production lines and product registries</span>
           </div>
         )}
       </div>
 
       {showResults ? (
-        <div className="results-container" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Map Module (Top) */}
-          <div className="map-module-container" style={{ height: '600px', width: '100%', marginTop: 0 }}>
-            <div className="map-module-header">
-              <MapPin size={18} color="var(--accent-primary)" />
-              <h2 className="map-module-title">Geographic Distribution</h2>
-            </div>
-            <div style={{ flex: 1, position: 'relative' }}>
-              <MapContainer 
-                center={[39.8283, -98.5795]} 
-                zoom={4} 
-                scrollWheelZoom={false}
-                style={{ height: '100%', width: '100%' }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {filteredAndSortedData.map(item => (
-                  <Marker key={item.id} position={[item.lat, item.lng]}>
-                    <Popup>
-                      <div style={{ minWidth: '150px' }}>
-                        <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: '600' }}>{item.companyName}</h3>
-                        <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>{item.parentCompany}</p>
-                        <div style={{ fontSize: '12px' }}>
-                          <strong>Products:</strong> {item.productsMade}
-                        </div>
-                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
-                          <strong>Throughput:</strong> <span style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{item.throughput}</span>
-                        </div>
-                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
-                          <strong>Capacity:</strong> {item.capacity}
-                        </div>
-                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
-                          <strong>Location:</strong> {item.cityState}
-                        </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </div>
-          </div>
-
-          {/* Results Table (Bottom) */}
-          <div className="table-card" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="results-container" style={{ display: 'flex', gap: '2rem', height: 'calc(100vh - 250px)', minHeight: '600px' }}>
+          <div className="table-card" style={{ flex: 1.2, display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Table Header Area */}
             <div className="table-header-area">
               <div>
@@ -297,7 +192,7 @@ export function ProductLookup() {
             </div>
 
             {/* Table Content */}
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
               <table className="data-table">
                 <thead>
                   <tr>
@@ -354,7 +249,7 @@ export function ProductLookup() {
                       <td>{row.parentCompany}</td>
                       <td className="company-name">{row.companyName}</td>
                       <td>{row.productsMade}</td>
-                      <td style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>{row.throughput}</td>
+                      <td style={{ fontWeight: '600', color: '#e31837' }}>{row.throughput}</td>
                       <td style={{ fontSize: '0.75rem' }}>{row.capacity}</td>
                       <td>
                         {renderConfidenceBadge(row.confidence)}
@@ -411,14 +306,56 @@ export function ProductLookup() {
               </button>
             </div>
           </div>
+
+          {/* Map Module */}
+          <div className="map-module-container" style={{ flex: 0.8, height: '100%', marginTop: 0 }}>
+            <div className="map-module-header">
+              <MapPin size={18} color="#e31837" />
+              <h2 className="map-module-title">Geographic Distribution</h2>
+            </div>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <MapContainer 
+                center={[39.8283, -98.5795]} 
+                zoom={4} 
+                scrollWheelZoom={false}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {filteredAndSortedData.map(item => (
+                  <Marker key={item.id} position={[item.lat, item.lng]}>
+                    <Popup>
+                      <div style={{ minWidth: '150px' }}>
+                        <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: '600' }}>{item.companyName}</h3>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>{item.parentCompany}</p>
+                        <div style={{ fontSize: '12px' }}>
+                          <strong>Products:</strong> {item.productsMade}
+                        </div>
+                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                          <strong>Throughput:</strong> <span style={{ color: '#e31837', fontWeight: '600' }}>{item.throughput}</span>
+                        </div>
+                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                          <strong>Capacity:</strong> {item.capacity}
+                        </div>
+                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                          <strong>Location:</strong> {item.cityState}
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          </div>
         </div>
       ) : !isSearching && (
-
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', minHeight: '400px' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', minHeight: '400px' }}>
           <div style={{ textAlign: 'center', maxWidth: '400px' }}>
             <Search size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-            <h2 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Start Your Search</h2>
-            <p>Enter a product category or specific SKU to identify manufacturers and their facility locations.</p>
+            <h2 style={{ color: '#0f172a', marginBottom: '0.5rem' }}>Start Your AI Search</h2>
+            <p>Enter a product category to identify manufacturers, including hidden co-packers and shadow facilities.</p>
           </div>
         </div>
       )}

@@ -17,6 +17,14 @@ export interface CompanyRecord {
   lng: number;
 }
 
+export interface HierarchyNode {
+  name: string;
+  type: 'parent' | 'unit' | 'acquisition' | 'segment' | 'cluster' | 'plant';
+  details?: string;
+  children?: HierarchyNode[];
+  status?: 'Active' | 'Under Review' | 'Strategic';
+}
+
 const SYSTEM_PROMPT = `
 You are an expert Corporate Investigator specializing in the North American food manufacturing industry.
 Your goal is to identify facilities and manufacturers for a specific product type.
@@ -72,6 +80,51 @@ export async function searchPlants(query: string): Promise<CompanyRecord[]> {
     return JSON.parse(text);
   } catch (error) {
     console.error("Gemini Search Error:", error);
+    throw error;
+  }
+}
+
+export async function getCompanyHierarchy(companyName: string): Promise<HierarchyNode> {
+  if (!API_KEY) {
+    throw new Error("Gemini API Key is missing.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const HIERARCHY_PROMPT = `
+  You are an expert in Corporate Intelligence.
+  Build a complete TOP-DOWN hierarchical map for the company: "${companyName}"
+  
+  The hierarchy must follow this EXACT structure:
+  1. Root (parent company)
+  2. Business Units (Major divisions)
+  3. Acquisitions/Segments (Sub-units or major acquired brands)
+  4. Regional Clusters (Geographic groupings of plants)
+  5. Processing Plants (Individual facility names and locations)
+
+  Return a valid JSON object following the HierarchyNode interface:
+  {
+    "name": string,
+    "type": "parent" | "unit" | "acquisition" | "segment" | "cluster" | "plant",
+    "details": string,
+    "status": "Active" | "Under Review" | "Strategic",
+    "children": HierarchyNode[]
+  }
+
+  Ensure the output is deep and comprehensive (at least 3-4 business units, each with multiple clusters and plants).
+  Return ONLY the JSON object.
+  `;
+
+  try {
+    const result = await model.generateContent(HIERARCHY_PROMPT);
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Hierarchy Search Error:", error);
     throw error;
   }
 }
