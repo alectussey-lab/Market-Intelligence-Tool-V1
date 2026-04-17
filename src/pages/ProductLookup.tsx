@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Sparkles, Loader } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -148,7 +148,7 @@ export function ProductLookup() {
             onChange={(e) => setProductTypeSearch(e.target.value)}
           />
           <button type="submit" className="btn-primary" style={{ padding: '0 1.5rem' }} disabled={isSearching}>
-            {isSearching ? <Loader2 className="animate-spin" size={20} /> : 'Search'}
+            {isSearching ? <Loader className="animate-spin" size={20} /> : 'Search'}
           </button>
         </form>
 

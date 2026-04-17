@@ -2,11 +2,19 @@ import React, { useState } from 'react';
 import { Search, Sparkles, Network, Loader2 } from 'lucide-react';
 import { getCompanyHierarchy, type HierarchyNode } from '../lib/gemini';
 
-function HierarchyItem({ node }: { node: HierarchyNode }) {
+function HierarchyItem({ node, depth = 0 }: { node: HierarchyNode; depth?: number }) {
   return (
     <div className="hierarchy-item">
-      {node.type !== 'parent' && <div className="node-connector"></div>}
-      <div className={`hierarchy-node node-${node.type}`}>
+      {node.type !== 'parent' && (
+        <div 
+          className="node-connector line-appear" 
+          style={{ animationDelay: `${depth * 0.3}s` }}
+        ></div>
+      )}
+      <div 
+        className={`hierarchy-node node-${node.type} node-appear`}
+        style={{ animationDelay: `${depth * 0.3 + 0.1}s` }}
+      >
         <span className="node-type">{node.type}</span>
         <span className="node-title">{node.name}</span>
         {node.details && <span className="node-details">{node.details}</span>}
@@ -20,7 +28,7 @@ function HierarchyItem({ node }: { node: HierarchyNode }) {
       {node.children && node.children.length > 0 && (
         <div className="hierarchy-children">
           {node.children.map((child, idx) => (
-            <HierarchyItem key={idx} node={child} />
+            <HierarchyItem key={idx} node={child} depth={depth + 1} />
           ))}
         </div>
       )}
