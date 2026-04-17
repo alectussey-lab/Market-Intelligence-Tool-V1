@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 :root {
   --text: #4a4a4a;
   --text-h: #1a1a1a;

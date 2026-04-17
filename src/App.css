@@ -34,32 +34,11 @@
 }
 
 /* Forpak Custom Logo Styles */
-.forpak-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-}
-
-.forpak-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  transform: skew(-15deg);
-}
-
-.forpak-lines span {
+.forpak-logo-img {
+  max-width: 180px;
+  height: auto;
   display: block;
-  height: 4px;
-  background-color: #1a1a1a; /* Base logo color, though can use #e31837 for red */
-  border-radius: 2px;
 }
-/* Use Streamline-esque blue or Forpak red. The screenshot uses blue stripes, but let's make it Forpak red or blue? Prompt said: "four pack logo instead of streamline". Let's use red. */
-.forpak-lines span:nth-child(1) { width: 22px; background-color: #e31837; }
-.forpak-lines span:nth-child(2) { width: 16px; margin-left: 2px; background-color: #e31837; }
-.forpak-lines span:nth-child(3) { width: 22px; margin-left: 4px; background-color: #e31837; }
 
 .sidebar-nav {
   display: flex;
@@ -384,4 +363,38 @@
   background-color: #f1f5f9;
   color: #0f172a;
   font-weight: 500;
+}
+
+/* Map Module */
+.map-module-container {
+  height: 500px;
+  width: 100%;
+  margin-top: 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-module-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #fafafa;
+}
+
+.map-module-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.leaflet-container {
+  border-radius: 0 0 12px 12px;
 }

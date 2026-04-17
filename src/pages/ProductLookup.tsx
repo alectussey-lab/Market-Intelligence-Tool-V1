@@ -1,5 +1,20 @@
 import { useState, useMemo } from 'react';
-import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Filter, Plus, Download, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix for default marker icon in Leaflet + React
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 
 type Confidence = 'High' | 'Medium' | 'Low';
 
@@ -10,30 +25,33 @@ interface CompanyRecord {
   productsMade: string;
   confidence: Confidence;
   cityState: string;
+  lat: number;
+  lng: number;
 }
 
 const generateMockData = (): CompanyRecord[] => {
-  const baseData: CompanyRecord[] = [
-    { id: '1', parentCompany: 'Tyson Foods', companyName: 'Springdale Processing', productsMade: 'IQF Chicken, Breaded Tenders', confidence: 'High', cityState: 'Springdale, AR' },
-    { id: '2', parentCompany: 'Conagra', companyName: 'Former Bakery Div', productsMade: 'Pizza Crust', confidence: 'Low', cityState: 'Omaha, NE' },
-    { id: '3', parentCompany: 'Hearthside Food Solutions', companyName: 'Facility 4A (Unlisted)', productsMade: 'Frozen Waffles, Cookies', confidence: 'Medium', cityState: 'McComb, OH' },
-    { id: '4', parentCompany: 'JBS USA', companyName: 'Plumrose USA', productsMade: 'Sliced Bacon, Deli Meats', confidence: 'High', cityState: 'Council Bluffs, IA' },
-    { id: '5', parentCompany: 'Kellogg Company', companyName: 'MorningStar Farms', productsMade: 'Veggie Patties, Plant-Based Links', confidence: 'High', cityState: 'Zanesville, OH' },
-    { id: '6', parentCompany: 'Nestlé', companyName: "Stouffer's Plant", productsMade: 'Frozen Mac & Cheese, Lasagna', confidence: 'Medium', cityState: 'Gaffney, SC' },
+  return [
+    { id: '1', parentCompany: 'Tyson Foods', companyName: 'Springdale Processing', productsMade: 'IQF Chicken, Breaded Tenders', confidence: 'High', cityState: 'Springdale, AR', lat: 36.1867, lng: -94.1288 },
+    { id: '2', parentCompany: 'Conagra Brands', companyName: 'Birdseye Frozen Div', productsMade: 'Frozen Vegetables, Ready Meals', confidence: 'High', cityState: 'Omaha, NE', lat: 41.2565, lng: -95.9345 },
+    { id: '3', parentCompany: 'Hearthside Food Solutions', companyName: 'McComb Bakery', productsMade: 'Cookies, Crackers, Snack Bars', confidence: 'Medium', cityState: 'McComb, OH', lat: 41.1070, lng: -83.7919 },
+    { id: '4', parentCompany: 'JBS USA', companyName: 'Plumrose USA', productsMade: 'Sliced Bacon, Deli Meats', confidence: 'High', cityState: 'Council Bluffs, IA', lat: 41.2619, lng: -95.8508 },
+    { id: '5', parentCompany: 'Kellanova', companyName: 'Zanesville Plant', productsMade: 'Veggie Patties, MorningStar Farms', confidence: 'High', cityState: 'Zanesville, OH', lat: 39.9403, lng: -82.0132 },
+    { id: '6', parentCompany: 'Nestlé USA', companyName: "Solon Facility", productsMade: 'Frozen Entrees, Stouffers, Lean Cuisine', confidence: 'High', cityState: 'Solon, OH', lat: 41.3898, lng: -81.4412 },
+    { id: '7', parentCompany: 'Kraft Heinz', companyName: 'Davenport Plant', productsMade: 'Oscar Mayer Deli Meats, Lunchables', confidence: 'High', cityState: 'Davenport, IA', lat: 41.5236, lng: -90.5776 },
+    { id: '8', parentCompany: 'General Mills', companyName: 'Cedar Rapids Facility', productsMade: 'Cheerios, Fruit Snacks', confidence: 'High', cityState: 'Cedar Rapids, IA', lat: 41.9779, lng: -91.6656 },
+    { id: '9', parentCompany: 'PepsiCo (Frito-Lay)', companyName: 'Perry Facility', productsMade: 'Lay\'s Potato Chips, Doritos', confidence: 'High', cityState: 'Perry, GA', lat: 32.4582, lng: -83.7316 },
+    { id: '10', parentCompany: 'Cargill', companyName: 'Wichita Beef Plant', productsMade: 'Ground Beef, Steaks', confidence: 'High', cityState: 'Wichita, KS', lat: 37.6889, lng: -97.3361 },
+    { id: '11', parentCompany: 'Mondelez International', companyName: 'Chicago Bakery', productsMade: 'Oreo, Nabisco Crackers', confidence: 'Medium', cityState: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
+    { id: '12', parentCompany: 'Danone North America', companyName: 'Minster Yogurt Plant', productsMade: 'Oikos, Dannon Yogurt', confidence: 'High', cityState: 'Minster, OH', lat: 40.3920, lng: -84.3777 },
+    { id: '13', parentCompany: 'Mars Wrigley', companyName: 'Hackettstown Plant', productsMade: 'M&Ms, Snickers', confidence: 'High', cityState: 'Hackettstown, NJ', lat: 40.8532, lng: -74.8291 },
+    { id: '14', parentCompany: 'Ferrero', companyName: 'Bloomington Facility', productsMade: 'Crunch Bar, Kinder Joy', confidence: 'Medium', cityState: 'Bloomington, IL', lat: 40.4842, lng: -88.9937 },
+    { id: '15', parentCompany: 'Hormel Foods', companyName: 'Austin Plant', productsMade: 'SPAM, Pepperoni', confidence: 'High', cityState: 'Austin, MN', lat: 43.6666, lng: -92.9746 },
+    { id: '16', parentCompany: 'Campbell Soup Co', companyName: 'Napoleon Plant', productsMade: 'V8 Juice, Canned Soups', confidence: 'High', cityState: 'Napoleon, OH', lat: 41.3923, lng: -84.1252 },
+    { id: '17', parentCompany: 'Sargento Foods', companyName: 'Plymouth Facility', productsMade: 'Shredded Cheese, Snack Packs', confidence: 'High', cityState: 'Plymouth, WI', lat: 43.7489, lng: -87.9712 },
+    { id: '18', parentCompany: 'Bimbo Bakeries USA', companyName: 'Horsham Bakery', productsMade: 'Sara Lee Bread, Entenmanns', confidence: 'Medium', cityState: 'Horsham, PA', lat: 40.1784, lng: -75.1274 },
+    { id: '19', parentCompany: 'TreeHouse Foods', companyName: 'Bay Valley Foods', productsMade: 'Private Label Dressings, Sauces', confidence: 'Medium', cityState: 'Oak Brook, IL', lat: 41.8389, lng: -87.9531 },
+    { id: '20', parentCompany: 'Schwan\'s Company', companyName: 'Marshall Facility', productsMade: 'Tony\'s Pizza, Red Baron', confidence: 'High', cityState: 'Marshall, MN', lat: 44.4469, lng: -95.7884 }
   ];
-  
-  const additional: CompanyRecord[] = [];
-  for(let i = 7; i <= 25; i++) {
-    additional.push({
-      id: i.toString(),
-      parentCompany: `Generic Corp ${i}`,
-      companyName: `Facility ${i}`,
-      productsMade: `Product ${i}A, Product ${i}B`,
-      confidence: i % 3 === 0 ? 'High' : i % 3 === 1 ? 'Medium' : 'Low',
-      cityState: `City ${i}, ST`
-    });
-  }
-  return [...baseData, ...additional];
 };
 
 const mockData = generateMockData();
@@ -83,7 +101,9 @@ export function ProductLookup() {
     // Sorting
     if (sortConfig !== null) {
       result.sort((a, b) => {
+        // @ts-ignore
         if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+        // @ts-ignore
         if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
@@ -248,7 +268,43 @@ export function ProductLookup() {
             <ChevronRight size={16} />
           </button>
         </div>
-        
+      </div>
+
+      {/* Map Module */}
+      <div className="map-module-container">
+        <div className="map-module-header">
+          <MapPin size={18} color="var(--accent-primary)" />
+          <h2 className="map-module-title">Geographic Distribution</h2>
+        </div>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <MapContainer 
+            center={[39.8283, -98.5795]} 
+            zoom={4} 
+            scrollWheelZoom={false}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {filteredAndSortedData.map(item => (
+              <Marker key={item.id} position={[item.lat, item.lng]}>
+                <Popup>
+                  <div style={{ minWidth: '150px' }}>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', fontWeight: '600' }}>{item.companyName}</h3>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b' }}>{item.parentCompany}</p>
+                    <div style={{ fontSize: '12px' }}>
+                      <strong>Products:</strong> {item.productsMade}
+                    </div>
+                    <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                      <strong>Location:</strong> {item.cityState}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
       </div>
     </div>
   );
